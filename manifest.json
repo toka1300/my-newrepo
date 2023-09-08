@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "StubHub Price Tracker",
+  "version": "1.0",
+  "description": "Track prices on StubHub and get notified when they reach your target price.",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["notifications", "storage", "tabs"],
+  "host_permissions": [
+    "https://stubhub-pricing-api.onrender.com/*"
+],
+  "content_scripts": [
+  {
+    "js": ["contentScript.js"],
+    "css": ["styles/page.css"],
+    "matches": [
+      "https://www.stubhub.com/*/event/*",
+      "https://www.stubhub.ca/*/event/*"
+    ]
+  }
+],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

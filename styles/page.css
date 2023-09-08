@@ -1,0 +1,15 @@
+.btn-price-alert {
+  display: block;
+  background-color: #2ec4b6;
+  margin: 0.5rem auto;
+  left: 50%;
+  padding: 0.5rem;
+  border-radius: 8px;
+  box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;;
+  transition: 0.4s;
+}
+
+.btn-price-alert:hover {
+  cursor: pointer;
+  background-color: #1cad9e;
+}
