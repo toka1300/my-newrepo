@@ -1,17 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-  <link rel="stylesheet" href="styles/popup.css">
-</head>
-<body>
-  <h1>Track price</h1>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StubHub Price Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/popup.css">
+  </head>
 
-  <button class="track">Track!</button>
-  <button class="pop-out">Popout</button>
-
-  <script src="app.js"></script>
-</body>
+  <body>
+    <h1>Stub Hub Price Alerts</h1>
+    <img src="/images/alert.svg" alt="Alert icon" class="price-alert-icon" title="Price Alert">
+    <img src="/images/eye-dollar.svg" alt="live price icon" class="live-price-icon" title="Live Price">
+    <div class="price-alert-list"></div>
+    <button class="clear-storage">Clear All</button>
+    <button class="btn-track">Track Event</button>
+    <button class="update">Update Prices</button>
+    <script src="utilities.js" type="module"></script>
+    <script src="popup.js" type="module"></script>
+  </body>
 </html>

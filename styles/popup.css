@@ -1,3 +1,106 @@
 body {
-  background-color: hotpink;
+  min-width: 600px;
+  align-items: center;
+  background-color: #F1EBFA;
+  width: fit-content;
+  font-family: 'Montserrat', sans-serif;
+}
+
+h1 {
+  font-weight: bold;
+}
+
+.price-alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style-type: none;
+  flex-wrap: nowrap;
+  padding: 0;
+  margin: 2rem 1rem;
+}
+
+.alert-wrapper {
+  display: flex;
+  align-items: center;
+  height: fit-content;
+  gap: 16px;
+  background-color: white;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.event-details {
+  width: 440px;
+  text-decoration: none;
+  color: initial;
+}
+
+.event-name {
+  display: inline-block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 1rem;
+  width: 100%;
+  font-weight: bold;
+}
+
+.alert-price,
+.live-min-price {
+  width: 4rem;
+  display: flex;
+  align-items: center;
+}
+
+.price-alert-icon {
+  position: absolute;
+  right: 66px;
+  top: 3rem;
+  width: 1.5rem;
+  height: auto;
+}
+
+.live-price-icon {
+  position: absolute;
+  right: 144px;
+  top: 3rem;
+  width: 1.5rem;
+  height: auto;
+}
+
+.date-venue-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.date::before,
+.venue::before,
+.alert-price::after {
+  display: inline-block;
+  width: 1rem;
+  height: auto;
+}
+
+.date::before {
+  content: url('/images/calendar.svg');
+}
+
+.venue::before {
+  content: url('/images/map-pin.svg');
+}
+
+.alert-price {
+  cursor: pointer;
+
+  &::after {
+    content: url('/images/edit.svg');
+    margin-left: 0.5rem;
+    transition: 0.4s;
+    opacity: 0;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
 }

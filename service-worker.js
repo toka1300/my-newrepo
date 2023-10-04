@@ -1,10 +1,23 @@
-const endpoint = 'http://localhost:3000/fetch-url?url=https://www.stubhub.ca/bruce-springsteen-montreal-tickets-11-20-2023/event/151473141/?quantity=2' //update this
+// import { test } from "/utilities.js";
 
-const onMessage = (e) => {
-  if (e.data === 'startFetching') {
-    setInterval(() => {
-        const priceObject = fetch(endpoint);
-        postMessage(priceObject)
-      }, 1800000)
-  }
-}
+// console.log('------------------I am a service worker, here to serve you-----------------');
+
+// let priceAlerts;
+// const fetchAllPriceAlerts = async () => {
+//   return new Promise((resolve) => {
+//     resolve(chrome.storage.sync.get(null))
+//   })
+// }
+
+// const init = async () => {
+//   priceAlerts = await fetchAllPriceAlerts();
+// }
+
+// init();
+
+// setInterval(() => {
+//   console.log('I am on a timer and grabbing prices automatically!!!');
+//   // updatePriceAlerts(priceAlerts)
+// }, 1000)
+
+// test();

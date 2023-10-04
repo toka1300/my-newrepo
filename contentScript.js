@@ -1,56 +1,69 @@
 console.log('<------------------Content script here------------------->');
-let currentEvent;
-
-chrome.runtime.onMessage.addEventListener((obj, sender, response) => {
-  const { type, eventId } = obj;
-
-  if (type === 'NEW') {
-    currentEvent = eventId
-    // newEventAdded();
-  }
-})
-
-const getElementByXpath = (path) => {
-  return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-}
 
 const alertButton = document.createElement('button');
-const insertAlertButton = () => {
-  const sellXPath = '//*[@id="stubhub-event-detail-listings-grid"]/div/div[1]'
-  const sellElement = getElementByXpath(sellXPath);
-  alertButton.textContent = 'Set Price Alert';
-  alertButton.classList.add('btn-price-alert')
-  sellElement.insertAdjacentElement("beforebegin", alertButton);
-}
 
-const getEventId = () => {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-      const url = tabs[0].url;
-      const id = url.split('/').at(-2);
-      resolve(id);
-    })
+// const getElementByXpath = (path) => {
+//   return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+// }
+
+const path = window.location.pathname;
+const activePageEventId = path.split('/').at(-2);
+const listingGrid = document.getElementById('stubhub-event-detail-listings-grid')
+
+const fetchActivePriceAlert = async () => {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(activePageEventId, (priceAlerts) => {
+      const activePriceAlert = priceAlerts[activePageEventId]
+      resolve(activePriceAlert)
+    });
   })
 }
 
-const getMinPrice = async () => {
+const getEventInfo = async (id) => {
   try {
-    const id = await getEventId();
     const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${id}`
+    console.log('fetching from', endpoint);
     const response = await fetch(endpoint)
     const json = await response.json();
-    const minPrice = json.minPrice;
-    return minPrice
+    return json
   } catch (e) {
     console.log('Error:', e);
   }
 }
 
-insertAlertButton();
-console.log(alertButton);
+const insertAlertButton = async () => {
+  alertButton.textContent = 'Set Price Alert';
+  alertButton.classList.add('button', 'btn-create-alert')
+  console.log(alertButton);
+  console.log(listingGrid);
+  listingGrid?.insertAdjacentElement("beforebegin", alertButton);
+}
 
-alertButton.addEventListener('click', async () => {
-  console.log('Let me grab that price for you');
-  const minPrice = await getMinPrice();
-  console.log(minPrice);
-});
+const insertEditButton = () => {
+  const editButton = document.createElement('button');
+  editButton.classList.add('button', 'btn-edit');
+  editButton.textContent = 'Existing Price Alert, edit in extension'
+  console.log(editButton);
+  console.log(listingGrid);
+  listingGrid?.insertAdjacentElement("beforebegin", editButton);
+}
+
+const addNewPriceAlert = async () => {
+  const eventObject = await getEventInfo(activePageEventId);
+  chrome.storage.sync.set({[activePageEventId]: eventObject}).then(() => {
+    console.log(`I have saved event:, ${activePageEventId} - ${eventObject.name}`);
+  })
+}
+
+const initContentScript = async () => {
+  const existingAlert = await fetchActivePriceAlert();
+  console.log(existingAlert);
+  if (!existingAlert) {
+    insertAlertButton();
+  } else {
+    insertEditButton();
+  }
+  alertButton.addEventListener('click', addNewPriceAlert)
+}
+
+// initContentScript();

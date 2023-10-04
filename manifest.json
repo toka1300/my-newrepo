@@ -4,10 +4,10 @@
   "version": "1.0",
   "description": "Track prices on StubHub and get notified when they reach your target price.",
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "service-worker.js",
     "type": "module"
   },
-  "permissions": ["notifications", "storage", "tabs"],
+  "permissions": ["notifications", "storage", "tabs", "activeTab"],
   "host_permissions": [
     "https://stubhub-pricing-api.onrender.com/*"
 ],
@@ -18,7 +18,8 @@
     "matches": [
       "https://www.stubhub.com/*/event/*",
       "https://www.stubhub.ca/*/event/*"
-    ]
+    ],
+    "type": "module"
   }
 ],
   "action": {
