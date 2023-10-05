@@ -1,60 +1,77 @@
-console.log('<------------------app.js script here------------------->');
+let priceAlerts;
+const listWrapper = document.querySelector('.price-alert-list');
+const clearButton = document.querySelector('.clear-storage');
+const updateButton = document.querySelector('.update');
+const trackButton = document.querySelector('.btn-track');
 
 const createElementWithConfig = (type, config = {}) => {
   const element = document.createElement(type);
   element.classList.add(config.class || '');
   element.textContent = config.textContent || '';
   return element;
-}
+};
 
-let priceAlerts
+const fetchAllPriceAlerts = async () => new Promise((resolve) => {
+  priceAlerts = chrome.storage.sync.get(null, (result) => {
+    priceAlerts = result;
+    resolve();
+  });
+});
 
-const fetchAllPriceAlerts = async () => {
-  return new Promise((resolve) => {
-    priceAlerts = chrome.storage.sync.get(null, (result) => {
-      priceAlerts = result
-      resolve()
-    })
-  })
-}
+const clearStorage = () => {
+  chrome.storage.sync.clear(() => {
+    const error = chrome.runtime.lastError;
+    if (error) console.log('Error:', error);
+  });
+  listWrapper.innerHTML = '';
+};
 
 const getCurrentTab = async () => {
   const [tab] = await chrome.tabs.query({ active: true });
-  const url = tab.url;
-  console.log(url);
+  const { url } = tab;
   const activePageEventId = url.split('/').at(-2);
   return activePageEventId;
-}
+};
 
-const clearButton = document.querySelector('.clear-storage');
-const updateButton = document.querySelector('.update');
-const trackButton = document.querySelector('.btn-track');
-const listWrapper = document.querySelector('.price-alert-list') ;
 const activePageEventId = await getCurrentTab();
-console.log(activePageEventId);
 
-const getEventInfo = async (id) => {
+const getEventInfo = async (ids) => {
   try {
-    const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${id}`
+    const csvIds = ids.toString();
+    const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${csvIds}`;
     console.log('fetching from', endpoint);
-    const response = await fetch(endpoint)
+    const response = await fetch(endpoint);
+    console.log(response);
     const json = await response.json();
-    return json
+    return json;
   } catch (e) {
     console.log('Error:', e);
+    return null;
   }
-}
+};
 
-const removeTrackButton = () => trackButton.remove();
+const saveNewAlertPrice = (e) => {
+  const priceAlertTarget = e.target;
+  const newValue = priceAlertTarget.textContent;
+  const wrapper = priceAlertTarget.closest('div');
+  const priceAlert = wrapper.querySelector('.alert-price');
+  const { id } = wrapper;
 
-export const updatePriceAlerts = async (priceAlerts) => {
-  const ids = Object.keys(priceAlerts)[0]
-  const eventObject = await getEventInfo(ids);
-  clearStorage();
-  chrome.storage.sync.set({[ids]: eventObject}).then(() => {
-    console.log(`I have updated event:, ${ids} - ${eventObject.name}`);
-  })
-}
+  chrome.storage.sync.get(id, (result) => {
+    const eventObject = result[id];
+    eventObject.userSetPriceAlert = newValue;
+    chrome.storage.sync.set({ [id]: eventObject });
+    priceAlert.textContent = newValue;
+  });
+};
+
+const alertUser = (alertPrice, alertData, alertWrapper) => {
+  if (alertPrice.textContent < alertData.minPrice) {
+    alertWrapper.classList.add('alert');
+  } else {
+    alertWrapper.classList.remove('alert');
+  }
+};
 
 const buildAlertElement = (key) => {
   const alertData = priceAlerts[key];
@@ -64,71 +81,60 @@ const buildAlertElement = (key) => {
   const alertPrice = createElementWithConfig('span', { class: 'alert-price', textContent: alertData.userSetPriceAlert || alertData.minPrice });
   const liveMinPrice = createElementWithConfig('span', { class: 'live-min-price', textContent: alertData.minPrice });
   const date = createElementWithConfig('span', { class: 'date', textContent: alertData.date });
-  const venue = createElementWithConfig('span',{class: 'venue', textContent: alertData.venue })
+  const venue = createElementWithConfig('span',{class: 'venue', textContent: alertData.venue });
   const eventDetails = createElementWithConfig('a', { class: 'event-details' });
   const dateVenueWrapper = createElementWithConfig('div', { class: 'date-venue-wrapper' });
 
-  alertPrice.contentEditable = "true";
-  alertPrice.tabIndex = "0";
-  dateVenueWrapper.append(date, venue);
-  eventDetails.append(eventName, dateVenueWrapper)
+  alertPrice.contentEditable = 'true';
+  alertPrice.tabIndex = '0';
   alertWrapper.id = key;
+  dateVenueWrapper.append(date, venue);
+  eventDetails.append(eventName, dateVenueWrapper);
   alertWrapper.append(eventDetails, alertPrice, liveMinPrice);
   listWrapper.append(alertWrapper);
+  alertUser(alertPrice, alertData, alertWrapper);
 
   alertPrice.addEventListener('blur', (e) => {
-    const priceAlertTarget = e.target;
-    const editedValue = priceAlertTarget.textContent;
-    const wrapper = priceAlertTarget.closest('div')
-    const id = wrapper.id;
-    const priceAlert = wrapper.querySelector('.alert-price');
-
-    console.log('id: ', id);
-
-    chrome.storage.sync.get(id, (result) => {
-      const eventObject = result[id];
-      console.log(eventObject);
-      eventObject.userSetPriceAlert = editedValue;
-      console.log(eventObject);
-      chrome.storage.sync.set({ [id]: eventObject })
-      priceAlert.textContent = editedValue;
-    })
-  })
-}
+    saveNewAlertPrice(e);
+    alertUser(alertPrice, alertData, alertWrapper);
+  });
+};
 
 const addNewPriceAlert = async () => {
   if (!priceAlerts[activePageEventId]) {
     const eventObject = await getEventInfo(activePageEventId);
-    chrome.storage.sync.set({ [activePageEventId]: eventObject });
+    chrome.storage.sync.set({ [activePageEventId]: eventObject[0] });
     await fetchAllPriceAlerts();
     buildAlertElement(activePageEventId);
-    removeTrackButton();
   }
-}
+};
 
-export const clearStorage = () => {
-  console.log('Clearing storage now');
-  chrome.storage.sync.clear(() => {
-    var error = chrome.runtime.lastError;
-    if (error) {
-      console.log('Error:', error);
-    } else {
-      console.log('All clear here!');
-    }
-  }); 
-}
-
-const init = async() => {
+const updatePriceAlerts = async () => {
+  const ids = Object.keys(priceAlerts);
+  const eventDataArray = await getEventInfo(ids);
+  clearStorage();
+  eventDataArray.forEach((alert) => {
+    chrome.storage.sync.set({ [alert.id]: alert }).then(() => {
+    });
+  });
+  // TODO: only fetch prices and replace those vales vs. building new elements
   await fetchAllPriceAlerts();
   Object.keys(priceAlerts).forEach((key) => {
-    buildAlertElement(key)
-  })
-  if (priceAlerts[activePageEventId]) removeTrackButton();
-}
+    buildAlertElement(key);
+  });
+  // TODO: popup saying all updated
+};
+
+const init = async () => {
+  await fetchAllPriceAlerts();
+  Object.keys(priceAlerts).forEach((key) => {
+    buildAlertElement(key);
+  });
+  if (priceAlerts[activePageEventId]) trackButton.remove();
+
+  clearButton.addEventListener('click', clearStorage);
+  updateButton.addEventListener('click', () => updatePriceAlerts());
+  trackButton.addEventListener('click', addNewPriceAlert);
+};
 
 init();
-
-clearButton.addEventListener('click', clearStorage);
-updateButton.addEventListener('click', () => updatePriceAlerts(priceAlerts));
-trackButton.addEventListener('click', addNewPriceAlert)
-
