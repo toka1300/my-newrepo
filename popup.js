@@ -41,7 +41,7 @@ const getEventInfo = async (ids) => {
     const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${csvIds}`;
     console.log('fetching from', endpoint);
     const response = await fetch(endpoint);
-    console.log(response);
+    console.log('response: ', response);
     const json = await response.json();
     return json;
   } catch (e) {
@@ -66,11 +66,25 @@ const saveNewAlertPrice = (e) => {
 };
 
 const alertUser = (alertPrice, alertData, alertWrapper) => {
-  if (alertPrice.textContent < alertData.minPrice) {
+  if (alertData.minPrice < alertPrice.textContent) {
     alertWrapper.classList.add('alert');
+    chrome.action.setBadgeText({ text: ' ' });
+    chrome.action.setBadgeBackgroundColor({ color: '#06d6a0' });
   } else {
     alertWrapper.classList.remove('alert');
   }
+};
+
+const deleteAlert = (e) => {
+  const alert = e.target.closest('div');
+  chrome.storage.sync.remove(alert.id, () => {
+    if (chrome.storage.lastError) {
+      console.log(chrome.runtime.lastError);
+    } else {
+      console.log('error:', e);
+    }
+  });
+  alert.remove();
 };
 
 const buildAlertElement = (key) => {
@@ -81,22 +95,28 @@ const buildAlertElement = (key) => {
   const alertPrice = createElementWithConfig('span', { class: 'alert-price', textContent: alertData.userSetPriceAlert || alertData.minPrice });
   const liveMinPrice = createElementWithConfig('span', { class: 'live-min-price', textContent: alertData.minPrice });
   const date = createElementWithConfig('span', { class: 'date', textContent: alertData.date });
-  const venue = createElementWithConfig('span',{class: 'venue', textContent: alertData.venue });
+  const venue = createElementWithConfig('span', { class: 'venue', textContent: alertData.venue });
   const eventDetails = createElementWithConfig('a', { class: 'event-details' });
   const dateVenueWrapper = createElementWithConfig('div', { class: 'date-venue-wrapper' });
-
+  const trashIcon = createElementWithConfig('img', { class: 'trash-icon' });
+  trashIcon.src = '/images/trash.svg';
   alertPrice.contentEditable = 'true';
   alertPrice.tabIndex = '0';
   alertWrapper.id = key;
+
   dateVenueWrapper.append(date, venue);
   eventDetails.append(eventName, dateVenueWrapper);
-  alertWrapper.append(eventDetails, alertPrice, liveMinPrice);
+  alertWrapper.append(eventDetails, alertPrice, liveMinPrice, trashIcon);
   listWrapper.append(alertWrapper);
   alertUser(alertPrice, alertData, alertWrapper);
 
   alertPrice.addEventListener('blur', (e) => {
     saveNewAlertPrice(e);
     alertUser(alertPrice, alertData, alertWrapper);
+  });
+
+  trashIcon.addEventListener('click', (e) => {
+    deleteAlert(e);
   });
 };
 
@@ -110,6 +130,7 @@ const addNewPriceAlert = async () => {
 };
 
 const updatePriceAlerts = async () => {
+  if (priceAlerts === undefined) return;
   const ids = Object.keys(priceAlerts);
   const eventDataArray = await getEventInfo(ids);
   clearStorage();
@@ -130,7 +151,7 @@ const init = async () => {
   Object.keys(priceAlerts).forEach((key) => {
     buildAlertElement(key);
   });
-  if (priceAlerts[activePageEventId]) trackButton.remove();
+  if (priceAlerts[activePageEventId]) trackButton.classList.add('hide');
 
   clearButton.addEventListener('click', clearStorage);
   updateButton.addEventListener('click', () => updatePriceAlerts());

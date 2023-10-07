@@ -8,6 +8,7 @@ body {
 
 h1 {
   font-weight: bold;
+  text-align: center;
 }
 
 .price-alert-list {
@@ -25,7 +26,6 @@ h1 {
   display: flex;
   align-items: center;
   height: fit-content;
-  gap: 16px;
   background-color: white;
   border-radius: 8px;
   padding: 0.5rem;
@@ -34,18 +34,27 @@ h1 {
     content: "";
     position: absolute;
     right: 16px;
-    top: 50%;
+    top: 0.5rem;
     width: 0.5rem;
     height: 0.5rem;
-    background-color: green;
+    background-color: #06d6a0;
     border-radius: 50%;
     opacity: 0;
     transition: 0.4s;
   }
-}
 
-.alert-wrapper.alert::after {
-  opacity: 1;
+  /* Green dot */
+  &.alert-wrapper.alert::after {
+    opacity: 1;
+  }
+
+  /* Edit & trash icons */
+  &:hover {
+    .alert-price:after,
+    &:hover .trash-icon  {
+      opacity: 1;
+    };
+  }
 }
 
 .event-details {
@@ -66,23 +75,26 @@ h1 {
 
 .alert-price,
 .live-min-price {
-  width: 4rem;
   display: flex;
   align-items: center;
+
+  &::before {
+    content: "$"
+  }
 }
 
 .price-alert-icon {
   position: absolute;
-  right: 144px;
-  top: 3rem;
+  right: 118px;
+  top: 2.75rem;
   width: 1.5rem;
   height: auto;
 }
 
 .live-price-icon {
   position: absolute;
-  right: 66px;
-  top: 3rem;
+  right: 62px;
+  top: 2.75rem;
   width: 1.5rem;
   height: auto;
 }
@@ -92,8 +104,6 @@ h1 {
   flex-direction: column;
 }
 
-.date::before,
-.venue::before,
 .alert-price::after {
   display: inline-block;
   width: 1rem;
@@ -102,10 +112,16 @@ h1 {
 
 .date::before {
   content: url('/images/calendar.svg');
+  display: inline-block;
+  width: 1rem;
+  height: auto;
 }
 
 .venue::before {
   content: url('/images/map-pin.svg');
+  display: inline-block;
+  width: 1rem;
+  height: auto;
 }
 
 .alert-price {
@@ -113,12 +129,58 @@ h1 {
 
   &::after {
     content: url('/images/edit.svg');
-    margin-left: 0.5rem;
+    margin-left: 0.25rem;
+    margin-right: 0.75rem;
     transition: 0.4s;
     opacity: 0;
   }
+}
 
-  &:hover::after {
-    opacity: 1;
-  }
+.trash-icon {
+  margin-left: 0.5rem;
+  transition: 0.4s;
+  opacity: 0;
+  width: 1rem;
+  height: auto;
+  cursor: pointer;
+  transition: 0.4s;
+}
+
+.btn-track {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+}
+
+.btn-track.hide {
+  display: none;
+}
+
+.btn {
+  border-radius: 24px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  height: auto;
+  padding: 0.5rem;
+  width: max-content;
+  cursor: pointer;
+}
+
+.btn-track {
+  background-color: rgb(99, 0, 255);
+  color: white;
+  border: none;
+}
+
+.btn.clear-storage {
+  color: rgb(99, 0, 255);
+  border: 1px solid rgb(207, 212, 217);
+  background-color: white;
+}
+
+.update {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  cursor: pointer;
 }
