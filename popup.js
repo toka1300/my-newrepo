@@ -11,10 +11,16 @@ const createElementWithConfig = (type, config = {}) => {
   return element;
 };
 
-const fetchAllPriceAlerts = async () => new Promise((resolve) => {
+const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
   priceAlerts = chrome.storage.sync.get(null, (result) => {
-    priceAlerts = result;
-    resolve();
+    const error = chrome.runtime.lastError;
+    if (error) {
+      console.log('Error fetching price alerts from Chrome storage:', error);
+      reject(chrome.runtime.lastError);
+    } else {
+      priceAlerts = result;
+      resolve();
+    }
   });
 });
 
@@ -26,14 +32,14 @@ const clearStorage = () => {
   listWrapper.innerHTML = '';
 };
 
-const getCurrentTab = async () => {
+const getCurrentTabId = async () => {
   const [tab] = await chrome.tabs.query({ active: true });
   const { url } = tab;
   const activePageEventId = url.split('/').at(-2);
   return activePageEventId;
 };
 
-const activePageEventId = await getCurrentTab();
+const activePageEventId = await getCurrentTabId();
 
 const getEventInfo = async (ids) => {
   try {
@@ -103,6 +109,8 @@ const buildAlertElement = (key) => {
   alertPrice.contentEditable = 'true';
   alertPrice.tabIndex = '0';
   alertWrapper.id = key;
+  eventDetails.href = alertData.url;
+  eventDetails.target = '_blank';
 
   dateVenueWrapper.append(date, venue);
   eventDetails.append(eventName, dateVenueWrapper);
