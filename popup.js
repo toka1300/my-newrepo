@@ -111,6 +111,7 @@ const buildAlertElement = (key) => {
   alertWrapper.id = key;
   eventDetails.href = alertData.url;
   eventDetails.target = '_blank';
+  console.log('test');
 
   dateVenueWrapper.append(date, venue);
   eventDetails.append(eventName, dateVenueWrapper);
