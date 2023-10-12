@@ -3,6 +3,7 @@ const listWrapper = document.querySelector('.price-alert-list');
 const clearButton = document.querySelector('.clear-storage');
 const updateButton = document.querySelector('.update');
 const trackButton = document.querySelector('.btn-track');
+const emailButton = document.querySelector('.btn-add-email');
 
 const createElementWithConfig = (type, config = {}) => {
   const element = document.createElement(type);
@@ -19,6 +20,7 @@ const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
       reject(chrome.runtime.lastError);
     } else {
       priceAlerts = result;
+      delete priceAlerts.emailAddress;
       resolve();
     }
   });
@@ -34,8 +36,10 @@ const clearStorage = () => {
 
 const getCurrentTabId = async () => {
   const [tab] = await chrome.tabs.query({ active: true });
-  const { url } = tab;
-  const activePageEventId = url.split('/').at(-2);
+  const urlObject = new URL(tab.url);
+  const { href, host } = urlObject;
+  if (!host.includes('stubhub')) return null;
+  const activePageEventId = href.split('/').at(-2);
   return activePageEventId;
 };
 
@@ -47,8 +51,8 @@ const getEventInfo = async (ids) => {
     const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${csvIds}`;
     console.log('fetching from', endpoint);
     const response = await fetch(endpoint);
-    console.log('response: ', response);
     const json = await response.json();
+    console.log(json);
     return json;
   } catch (e) {
     console.log('Error:', e);
@@ -58,26 +62,30 @@ const getEventInfo = async (ids) => {
 
 const saveNewAlertPrice = (e) => {
   const priceAlertTarget = e.target;
-  const newValue = priceAlertTarget.textContent;
+  const newValue = Number(priceAlertTarget.textContent);
   const wrapper = priceAlertTarget.closest('div');
   const priceAlert = wrapper.querySelector('.alert-price');
   const { id } = wrapper;
 
   chrome.storage.sync.get(id, (result) => {
     const eventObject = result[id];
-    eventObject.userSetPriceAlert = newValue;
+    eventObject.priceAlert = newValue;
+    console.log(eventObject);
     chrome.storage.sync.set({ [id]: eventObject });
     priceAlert.textContent = newValue;
   });
 };
 
-const alertUser = (alertPrice, alertData, alertWrapper) => {
-  if (alertData.minPrice < alertPrice.textContent) {
+const alertUser = (alertWrapper) => {
+  const alertPrice = Number(alertWrapper.querySelector('.alert-price').textContent);
+  const minPrice = Number(alertWrapper.querySelector('.live-min-price').textContent);
+  if (minPrice < alertPrice) {
     alertWrapper.classList.add('alert');
     chrome.action.setBadgeText({ text: ' ' });
     chrome.action.setBadgeBackgroundColor({ color: '#06d6a0' });
   } else {
     alertWrapper.classList.remove('alert');
+    chrome.action.setBadgeText({ text: '' });
   }
 };
 
@@ -98,7 +106,7 @@ const buildAlertElement = (key) => {
   if (!alertData) return;
   const alertWrapper = createElementWithConfig('div', { class: 'alert-wrapper' });
   const eventName = createElementWithConfig('span', { class: 'event-name', textContent: alertData.name });
-  const alertPrice = createElementWithConfig('span', { class: 'alert-price', textContent: alertData.userSetPriceAlert || alertData.minPrice });
+  const alertPrice = createElementWithConfig('span', { class: 'alert-price', textContent: alertData.priceAlert });
   const liveMinPrice = createElementWithConfig('span', { class: 'live-min-price', textContent: alertData.minPrice });
   const date = createElementWithConfig('span', { class: 'date', textContent: alertData.date });
   const venue = createElementWithConfig('span', { class: 'venue', textContent: alertData.venue });
@@ -116,11 +124,11 @@ const buildAlertElement = (key) => {
   eventDetails.append(eventName, dateVenueWrapper);
   alertWrapper.append(eventDetails, alertPrice, liveMinPrice, trashIcon);
   listWrapper.append(alertWrapper);
-  alertUser(alertPrice, alertData, alertWrapper);
+  alertUser(alertWrapper);
 
   alertPrice.addEventListener('blur', (e) => {
     saveNewAlertPrice(e);
-    alertUser(alertPrice, alertData, alertWrapper);
+    alertUser(alertWrapper);
   });
 
   trashIcon.addEventListener('click', (e) => {
@@ -128,33 +136,47 @@ const buildAlertElement = (key) => {
   });
 };
 
-const addNewPriceAlert = async () => {
+const addNewPriceAlert = async (priceAlertValue) => {
   if (!priceAlerts[activePageEventId]) {
+    // TODO: Add a loading dialog with warning that first one takes some time
     const eventObject = await getEventInfo(activePageEventId);
+    eventObject[0].priceAlert = priceAlertValue;
     chrome.storage.sync.set({ [activePageEventId]: eventObject[0] });
     await fetchAllPriceAlerts();
     buildAlertElement(activePageEventId);
   }
 };
 
-const updatePriceAlerts = async () => {
+const updatePriceAlerts = async (eventDataArray) => {
   if (priceAlerts === undefined) return;
-  const ids = Object.keys(priceAlerts);
-  const eventDataArray = await getEventInfo(ids);
-  clearStorage();
-  eventDataArray.forEach((alert) => {
-    chrome.storage.sync.set({ [alert.id]: alert }).then(() => {
-    });
+  const rows = document.querySelectorAll('.alert-wrapper');
+  rows.forEach((row) => {
+    const livePriceElement = row.querySelector('.live-min-price');
+    const updatedEventData = eventDataArray.find((item) => item.id === Number(row.id));
+    const updatedPrice = updatedEventData ? Number(updatedEventData.minPrice) : null;
+    if (updatedPrice !== livePriceElement.textContent) {
+      livePriceElement.textContent = updatedPrice;
+      chrome.storage.sync.get(row.id, (result) => {
+        const eventObject = result[row.id];
+        eventObject.minPrice = updatedPrice;
+        chrome.storage.sync.set({ [row.id]: eventObject });
+      });
+      alertUser(row);
+    }
   });
-  // TODO: only fetch prices and replace those vales vs. building new elements
-  await fetchAllPriceAlerts();
-  Object.keys(priceAlerts).forEach((key) => {
-    buildAlertElement(key);
+  eventDataArray.forEach((alert) => {
+    chrome.storage.sync.set({ [alert.id]: alert });
   });
   // TODO: popup saying all updated
 };
 
 const init = async () => {
+  const setPriceWindow = document.querySelector('.set-price-alert-window');
+  const emailWindow = document.querySelector('.add-email-window');
+  const wrongUrlWindow = document.querySelector('.non-stubhub-page');
+  const trackNewEventButton = document.querySelector('.btn-submit-tracking');
+  const submitEmail = document.querySelector('.btn-submit-email');
+  const currentTabId = await getCurrentTabId();
   await fetchAllPriceAlerts();
   Object.keys(priceAlerts).forEach((key) => {
     buildAlertElement(key);
@@ -162,8 +184,46 @@ const init = async () => {
   if (priceAlerts[activePageEventId]) trackButton.classList.add('hide');
 
   clearButton.addEventListener('click', clearStorage);
-  updateButton.addEventListener('click', () => updatePriceAlerts());
-  trackButton.addEventListener('click', addNewPriceAlert);
+
+  updateButton.addEventListener('click', async () => {
+    const ids = Object.keys(priceAlerts);
+    const eventDataArray = await getEventInfo(ids);
+    updatePriceAlerts(eventDataArray);
+  });
+
+  trackButton.addEventListener('click', () => {
+    if (currentTabId) {
+      setPriceWindow.classList.add('show');
+    } else {
+      wrongUrlWindow.classList.add('show');
+    }
+  });
+
+  emailButton.addEventListener('click', () => {
+    emailWindow.classList.add('show');
+  });
+
+  document.addEventListener('click', (e) => {
+    const outsideTrackClick = !setPriceWindow.contains(e.target) && e.target !== trackButton;
+    const outsideEmailClick = !emailWindow.contains(e.target) && e.target !== emailButton;
+
+    if ((outsideTrackClick && setPriceWindow.classList.contains('show')) || e.target === trackNewEventButton) {
+      setPriceWindow.classList.remove('show');
+    }
+    if ((outsideEmailClick && emailWindow.classList.contains('show')) || e.target === submitEmail) {
+      emailWindow.classList.remove('show');
+    }
+  });
+
+  trackNewEventButton.addEventListener('click', () => {
+    const priceAlertSet = setPriceWindow.querySelector('input').value;
+    addNewPriceAlert(priceAlertSet);
+  });
+
+  submitEmail.addEventListener('click', () => {
+    const emailAddress = emailWindow.querySelector('input').value;
+    chrome.storage.sync.set({ emailAddress });
+  });
 };
 
 init();
