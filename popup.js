@@ -1,9 +1,16 @@
 let priceAlerts;
 const listWrapper = document.querySelector('.price-alert-list');
-const clearButton = document.querySelector('.clear-storage');
+// const clearButton = document.querySelector('.clear-storage');
 const updateButton = document.querySelector('.update');
 const trackButton = document.querySelector('.btn-track');
 const emailButton = document.querySelector('.btn-add-email');
+const setPriceWindow = document.querySelector('.set-price-alert-window');
+const emailWindow = document.querySelector('.add-email-window');
+const wrongUrlWindow = document.querySelector('.non-stubhub-page');
+const trackNewEventButton = document.querySelector('.btn-submit-tracking');
+const submitEmail = document.querySelector('.btn-submit-email');
+const emailInput = document.getElementById('email-input');
+const currencyCheckbox = document.querySelector('.switch input');
 
 const createElementWithConfig = (type, config = {}) => {
   const element = document.createElement(type);
@@ -20,19 +27,53 @@ const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
       reject(chrome.runtime.lastError);
     } else {
       priceAlerts = result;
-      delete priceAlerts.emailAddress;
+      delete priceAlerts.email;
+      delete priceAlerts.currency;
       resolve();
     }
   });
 });
 
-const clearStorage = () => {
-  chrome.storage.sync.clear(() => {
-    const error = chrome.runtime.lastError;
-    if (error) console.log('Error:', error);
+// const deleteEmail = async () => {
+//   chrome.storage.sync.remove('email');
+// };
+
+const fetchEmail = async () => new Promise((resolve) => {
+  chrome.storage.sync.get('email', (result) => {
+    const { email } = result;
+    resolve(email);
   });
-  listWrapper.innerHTML = '';
-};
+});
+
+const setCurrency = async () => new Promise((resolve) => {
+  chrome.storage.sync.get('currency', (result) => {
+    const { currency } = result;
+    if (currency === 'usd') currencyCheckbox.checked = true;
+    resolve();
+  });
+});
+
+const fetchCad = async (id) => new Promise((resolve) => {
+  chrome.storage.sync.get(id, (result) => {
+    const { minPrice } = result[id];
+    resolve(minPrice);
+  });
+});
+
+const fetchUsd = async (id) => new Promise((resolve) => {
+  chrome.storage.sync.get(id, (result) => {
+    const { minPriceUsd } = result[id];
+    resolve(minPriceUsd);
+  });
+});
+
+// const clearStorage = () => {
+//   chrome.storage.sync.clear(() => {
+//     const error = chrome.runtime.lastError;
+//     if (error) console.log('Error:', error);
+//   });
+//   listWrapper.innerHTML = '';
+// };
 
 const getCurrentTabId = async () => {
   const [tab] = await chrome.tabs.query({ active: true });
@@ -107,13 +148,16 @@ const buildAlertElement = (key) => {
   const alertWrapper = createElementWithConfig('div', { class: 'alert-wrapper' });
   const eventName = createElementWithConfig('span', { class: 'event-name', textContent: alertData.name });
   const alertPrice = createElementWithConfig('span', { class: 'alert-price', textContent: alertData.priceAlert });
-  const liveMinPrice = createElementWithConfig('span', { class: 'live-min-price', textContent: alertData.minPrice });
+  const liveMinPrice = currencyCheckbox.checked === false
+    ? createElementWithConfig('span', { class: 'live-min-price', textContent: alertData.minPrice })
+    : createElementWithConfig('span', { class: 'live-min-price', textContent: alertData.minPriceUsd });
   const date = createElementWithConfig('span', { class: 'date', textContent: alertData.date });
   const venue = createElementWithConfig('span', { class: 'venue', textContent: alertData.venue });
   const eventDetails = createElementWithConfig('a', { class: 'event-details' });
   const dateVenueWrapper = createElementWithConfig('div', { class: 'date-venue-wrapper' });
   const trashIcon = createElementWithConfig('img', { class: 'trash-icon' });
   trashIcon.src = '/images/trash.svg';
+  trashIcon.title = 'Delete this price alert';
   alertPrice.contentEditable = 'true';
   alertPrice.tabIndex = '0';
   alertWrapper.id = key;
@@ -170,59 +214,115 @@ const updatePriceAlerts = async (eventDataArray) => {
   // TODO: popup saying all updated
 };
 
+const closeDialogs = (e) => {
+  const outsideTrackClick = !setPriceWindow.contains(e.target) && e.target !== trackButton;
+  const outsideEmailClick = !emailWindow.contains(e.target) && e.target !== emailButton;
+  const outsideWrongUrlClick = !emailWindow.contains(e.target) && e.target !== trackButton;
+
+  if ((outsideTrackClick && setPriceWindow.classList.contains('show')) || e.target === trackNewEventButton) {
+    setPriceWindow.classList.remove('show');
+  }
+  if ((outsideEmailClick && emailWindow.classList.contains('show')) || e.target === submitEmail) {
+    emailWindow.classList.remove('show');
+  }
+  if ((outsideWrongUrlClick && wrongUrlWindow.classList.contains('show'))) {
+    wrongUrlWindow.classList.remove('show');
+  }
+};
+
+const subscribedEmail = createElementWithConfig('span', { class: 'subscribed-email' });
+
+const replaceEmailInput = () => {
+  emailInput.replaceWith(subscribedEmail);
+  subscribedEmail.contentEditable = true;
+};
+
+const checkForExistingEmail = async () => {
+  const email = await fetchEmail();
+  if (email) {
+    subscribedEmail.textContent = email;
+    replaceEmailInput();
+  }
+};
+
+const swapCadUsd = async () => {
+  if (priceAlerts === undefined) return;
+  const rows = document.querySelectorAll('.alert-wrapper');
+  rows.forEach(async (row) => {
+    const livePriceElement = row.querySelector('.live-min-price');
+    const usd = await fetchUsd(row.id);
+    livePriceElement.textContent = usd;
+  });
+  chrome.storage.sync.set({ currency: 'usd' });
+};
+
+const swapUsdCad = () => {
+  if (priceAlerts === undefined) return;
+  const rows = document.querySelectorAll('.alert-wrapper');
+  rows.forEach(async (row) => {
+    const livePriceElement = row.querySelector('.live-min-price');
+    const cad = await fetchCad(row.id);
+    livePriceElement.textContent = cad;
+  });
+  chrome.storage.sync.set({ currency: 'cad' });
+};
+
+// --------Event Listeners-------------
+submitEmail.addEventListener('click', () => {
+  const email = emailInput.value || subscribedEmail.textContent;
+  chrome.storage.sync.set({ email });
+  subscribedEmail.textContent = email;
+  if (emailInput) replaceEmailInput();
+});
+
+// clearButton.addEventListener('click', clearStorage);
+updateButton.addEventListener('click', async () => {
+  const ids = Object.keys(priceAlerts);
+  const eventDataArray = await getEventInfo(ids);
+  updatePriceAlerts(eventDataArray);
+});
+
+emailButton.addEventListener('click', () => {
+  emailWindow.classList.add('show');
+});
+
+document.addEventListener('click', (e) => {
+  closeDialogs(e);
+});
+
+trackNewEventButton.addEventListener('click', () => {
+  const priceAlertSet = setPriceWindow.querySelector('input').value;
+  addNewPriceAlert(priceAlertSet);
+});
+
+// When launched need to check this too
+currencyCheckbox.addEventListener('change', (e) => {
+  if (e.target.checked) {
+    console.log('swapping to usd');
+    swapCadUsd();
+  } else {
+    console.log('swapping to cad');
+    swapUsdCad();
+  }
+});
+
 const init = async () => {
-  const setPriceWindow = document.querySelector('.set-price-alert-window');
-  const emailWindow = document.querySelector('.add-email-window');
-  const wrongUrlWindow = document.querySelector('.non-stubhub-page');
-  const trackNewEventButton = document.querySelector('.btn-submit-tracking');
-  const submitEmail = document.querySelector('.btn-submit-email');
   const currentTabId = await getCurrentTabId();
   await fetchAllPriceAlerts();
-  Object.keys(priceAlerts).forEach((key) => {
-    buildAlertElement(key);
-  });
+  // await deleteEmail();
+  await checkForExistingEmail();
+  await setCurrency();
+
+  Object.keys(priceAlerts).forEach((key) => buildAlertElement(key));
   if (priceAlerts[activePageEventId]) trackButton.classList.add('hide');
-
-  clearButton.addEventListener('click', clearStorage);
-
-  updateButton.addEventListener('click', async () => {
-    const ids = Object.keys(priceAlerts);
-    const eventDataArray = await getEventInfo(ids);
-    updatePriceAlerts(eventDataArray);
-  });
 
   trackButton.addEventListener('click', () => {
     if (currentTabId) {
       setPriceWindow.classList.add('show');
+      // Add focus here
     } else {
       wrongUrlWindow.classList.add('show');
     }
-  });
-
-  emailButton.addEventListener('click', () => {
-    emailWindow.classList.add('show');
-  });
-
-  document.addEventListener('click', (e) => {
-    const outsideTrackClick = !setPriceWindow.contains(e.target) && e.target !== trackButton;
-    const outsideEmailClick = !emailWindow.contains(e.target) && e.target !== emailButton;
-
-    if ((outsideTrackClick && setPriceWindow.classList.contains('show')) || e.target === trackNewEventButton) {
-      setPriceWindow.classList.remove('show');
-    }
-    if ((outsideEmailClick && emailWindow.classList.contains('show')) || e.target === submitEmail) {
-      emailWindow.classList.remove('show');
-    }
-  });
-
-  trackNewEventButton.addEventListener('click', () => {
-    const priceAlertSet = setPriceWindow.querySelector('input').value;
-    addNewPriceAlert(priceAlertSet);
-  });
-
-  submitEmail.addEventListener('click', () => {
-    const emailAddress = emailWindow.querySelector('input').value;
-    chrome.storage.sync.set({ emailAddress });
   });
 };
 

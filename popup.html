@@ -19,21 +19,38 @@
     </div>
 
     <div class="add-email-window dialog">
-      <label for="email-input">Add an email to be notified of price drops</label>
+      <label for="email-input">Add or edit email for price drops notifications</label>
+      <span class="registered-email"></span>
       <input type="text" id="email-input">
       <button class="btn btn-submit-email">Submit</button>
     </div>
 
     <div class="non-stubhub-page dialog">Navigate to a StubHub event page to in order to add a price alert</div>
-    <img src="/images/alert.svg" alt="Alert icon" class="price-alert-icon" title="Alert Me At">
-    <img src="/images/eye-dollar.svg" alt="live price icon" class="live-price-icon" title="Live Price">
+
+    <div class="icon-row">
+      <div class="icon-text-wrapper">
+        <img src="/images/alert.svg" alt="Alert icon" class="price-alert-icon" title="Alert Me At">
+        <span>Alert Set</span>
+      </div>
+      <div class="icon-text-wrapper">
+        <img src="/images/dollar-sign.svg" alt="live price icon" class="live-price-icon" title="Live Price">
+        <span>Live</span>
+      </div>
+    </div>
     <div class="price-alert-list"></div>
-    <button class="clear-storage btn" title="Delete all pricing alerts">Delete All</button>
-    <button class="btn-add-email btn">Add email notifications</button>
+    <!-- <button class="clear-storage btn" title="Delete all pricing alerts">Delete All</button> -->
+    <button class="btn-add-email btn">Add/Edit Email Notifications</button>
     <img class="btn-track btn" src="/images/plus.svg" alt="Plus sign" title="Start tracking this event">
     <img src="/images/refresh.svg" alt="Refresh button" class="update" title="Refresh live pricing data">
 
     <script src="utilities.js" type="module"></script>
     <script src="popup.js" type="module"></script>
+
+    <label class="switch">
+      <span id="cad">CAD</span>
+      <input type="checkbox">
+      <span class="slider"></span>
+      <span id="usd">USD</span>
+    </label>
   </body>
 </html>

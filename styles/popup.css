@@ -19,7 +19,7 @@ h1 {
   list-style-type: none;
   flex-wrap: nowrap;
   padding: 0;
-  margin: 2rem 1rem;
+  margin: 0.3rem 1rem;
 }
 
 .price-alert-list:empty::before {
@@ -69,7 +69,7 @@ h1 {
 }
 
 .event-details {
-  width: 440px;
+  width: 452px;
   text-decoration: none;
   color: initial;
 }
@@ -94,21 +94,26 @@ h1 {
     }
 }
 
-.price-alert-icon {
+/* .live-min-price {
+  position: absolute;
+  right: 34px;
+} */
+
+/* .price-alert-icon {
   position: absolute;
   right: 118px;
   top: 2.75rem;
   width: 1.5rem;
   height: auto;
-}
+} */
 
-.live-price-icon {
+/* .live-price-icon {
   position: absolute;
   right: 62px;
   top: 2.75rem;
   width: 1.5rem;
   height: auto;
-}
+} */
 
 .date-venue-wrapper {
   display: flex;
@@ -126,6 +131,7 @@ h1 {
   display: inline-block;
   width: 1rem;
   height: auto;
+  margin-right: 0.25rem;
 }
 
 .venue::before {
@@ -133,6 +139,7 @@ h1 {
   display: inline-block;
   width: 1rem;
   height: auto;
+  margin-right: 0.25rem;
 }
 
 .alert-price {
@@ -142,20 +149,24 @@ h1 {
   &::after {
     content: url('/images/edit.svg');
     margin-left: 0.25rem;
-    margin-right: 0.75rem;
+    margin-right: 0.25rem;
     transition: 0.4s;
     opacity: 0;
   }
 }
 
 .trash-icon {
-  margin-left: 0.5rem;
+  margin-left: auto;
   transition: 0.4s;
   opacity: 0;
   width: 1rem;
   height: auto;
   cursor: pointer;
   transition: 0.4s;
+
+  &:hover {
+    scale: 1.2;
+  }
 }
 
 .btn-track {
@@ -210,27 +221,146 @@ h1 {
   overflow: hidden;
 }
 
-.set-price-alert-window {
+.set-price-alert-window,
+.non-stubhub-page {
   width: 0;
+  height: 0;
   top: 2.8rem;
   right: 2.5rem;
   gap: 0.5rem;
 }
 
-.set-price-alert-window.show {
-  height: 100px;
+.set-price-alert-window.show,
+.non-stubhub-page.show {
   width: 143px;
   padding: 1rem;
 }
 
+.set-price-alert-window {
+  height: 100px;
+}
+
+.non-stubhub-page.show {
+  height: 50px;
+}
+
 .add-email-window {
   width: 200px;
-  bottom: 6px;
-  left: 87px;
+  bottom: 0.5rem;
+  left: 0.5rem;
   gap: 0.5rem;
 }
 
 .add-email-window.show {
   height: 100px;
   padding: 1rem;
+}
+
+.registered-email {
+  display: block;
+  height: 1rem;
+}
+
+.subscribed-email {
+  display: flex;
+  cursor: pointer;
+  padding: 1px 0;
+
+  &::before {
+    content: url('/images/edit.svg');
+    margin-right: 0.25rem;
+    height: 1rem;
+    width: 1rem;
+  }
+  
+  &:hover::before {
+    scale: 1.1;
+  }
+}
+
+.icon-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-right: 3rem;
+}
+
+.icon-text-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.675rem;
+
+  & img {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+}
+
+.btn-add-email {
+  margin: 0.5rem 0;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+  margin-left: 300px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 1rem;
+  width: 1rem;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+#usd {
+  position: absolute;
+  right: -32px;
+  top: 6px;
+}
+
+#cad {
+  position: absolute;
+  left: -32px;
+  top: 6px;
 }

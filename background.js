@@ -8,7 +8,8 @@ const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
       reject(chrome.runtime.lastError);
     } else {
       priceAlerts = result;
-      delete priceAlerts.emailAddress;
+      delete priceAlerts.email;
+      delete priceAlerts.currency;
       resolve();
     }
   });
@@ -22,6 +23,7 @@ const getEventInfo = async (ids) => {
     const response = await fetch(endpoint);
     console.log(response);
     const json = await response.json();
+    console.log(json);
     return json;
   } catch (e) {
     console.log('Error:', e);
@@ -32,14 +34,20 @@ const getEventInfo = async (ids) => {
 const sendEmailNotification = (alert) => {
   chrome.storage.sync.get('emailAddress', async (result) => {
     const email = result.emailAddress;
-    console.log(alert);
     const { date, name, url } = alert;
-    const endpoint = `https://stubhub-pricing-api.onrender.com/notify-user?email=${email}&date=${date}&name=${name}&url=${url}`;
-    console.log('Fetching from: ', endpoint);
-    const response = await fetch(endpoint);
-    console.log(response);
-    const json = await response.json();
-    return json;
+    const endpoint = 'https://stubhub-pricing-api.onrender.com/email-user';
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        date,
+        name,
+        url,
+      }),
+    });
+    const text = await resp.text();
+    console.log(text);
   });
 };
 
@@ -62,7 +70,6 @@ const updatePriceAlerts = async () => {
   const fetchedDataArray = await getEventInfo(ids);
   console.log(fetchedDataArray);
   fetchedDataArray.forEach((alert) => {
-    sendEmailNotification(alert); // TODO: Delete this line
     if (alert.minPrice !== priceAlerts[alert.id].minPrice) {
       inTheMoney = 'no';
       chrome.storage.sync.get(String(alert.id), (result) => {
@@ -79,11 +86,9 @@ const updatePriceAlerts = async () => {
   alertUser(inTheMoney);
 };
 
-updatePriceAlerts();
-
-// chrome.alarms.create('checkPrices', { periodInMinutes: 60 });
-// chrome.alarms.onAlarm.addListener((alarm) => {
-//   if (alarm.name === 'checkPrices') {
-//     updatePriceAlerts();
-//   }
-// });
+chrome.alarms.create('checkPrices', { periodInMinutes: 60 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'checkPrices') {
+    updatePriceAlerts();
+  }
+});
