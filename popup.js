@@ -1,6 +1,5 @@
 let priceAlerts;
 const listWrapper = document.querySelector('.price-alert-list');
-// const clearButton = document.querySelector('.clear-storage');
 const updateButton = document.querySelector('.update');
 const trackButton = document.querySelector('.btn-track');
 const emailButton = document.querySelector('.btn-add-email');
@@ -11,6 +10,8 @@ const trackNewEventButton = document.querySelector('.btn-submit-tracking');
 const submitEmail = document.querySelector('.btn-submit-email');
 const emailInput = document.getElementById('email-input');
 const currencyCheckbox = document.querySelector('.switch input');
+const loadingDialog = document.querySelector('.loading-dialog');
+const doneLoadingDialog = document.querySelector('.done-loading-dialog');
 
 const createElementWithConfig = (type, config = {}) => {
   const element = document.createElement(type);
@@ -23,7 +24,7 @@ const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
   priceAlerts = chrome.storage.sync.get(null, (result) => {
     const error = chrome.runtime.lastError;
     if (error) {
-      console.log('Error fetching price alerts from Chrome storage:', error);
+      console.error('Error fetching price alerts from Chrome storage:', error);
       reject(chrome.runtime.lastError);
     } else {
       priceAlerts = result;
@@ -33,10 +34,6 @@ const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
     }
   });
 });
-
-// const deleteEmail = async () => {
-//   chrome.storage.sync.remove('email');
-// };
 
 const fetchEmail = async () => new Promise((resolve) => {
   chrome.storage.sync.get('email', (result) => {
@@ -67,19 +64,25 @@ const fetchUsd = async (id) => new Promise((resolve) => {
   });
 });
 
-// const clearStorage = () => {
-//   chrome.storage.sync.clear(() => {
-//     const error = chrome.runtime.lastError;
-//     if (error) console.log('Error:', error);
-//   });
-//   listWrapper.innerHTML = '';
-// };
+const loadingAnimationStart = () => {
+  updateButton.classList.add('rotate');
+  loadingDialog.classList.remove('hidden');
+};
+
+const loadingAnimationEnd = () => {
+  updateButton.classList.remove('rotate');
+  loadingDialog.classList.add('hidden');
+  doneLoadingDialog.classList.remove('hidden');
+  setTimeout(() => {
+    doneLoadingDialog.classList.add('hidden');
+  }, '2000');
+};
 
 const getCurrentTabId = async () => {
   const [tab] = await chrome.tabs.query({ active: true });
   const urlObject = new URL(tab.url);
-  const { href, host } = urlObject;
-  if (!host.includes('stubhub')) return null;
+  const { href, host, pathname } = urlObject;
+  if (!host.includes('stubhub') || !pathname.includes('event')) return null;
   const activePageEventId = href.split('/').at(-2);
   return activePageEventId;
 };
@@ -111,7 +114,6 @@ const saveNewAlertPrice = (e) => {
   chrome.storage.sync.get(id, (result) => {
     const eventObject = result[id];
     eventObject.priceAlert = newValue;
-    console.log(eventObject);
     chrome.storage.sync.set({ [id]: eventObject });
     priceAlert.textContent = newValue;
   });
@@ -136,10 +138,9 @@ const deleteAlert = (e) => {
     if (chrome.storage.lastError) {
       console.log(chrome.runtime.lastError);
     } else {
-      console.log('error:', e);
+      alert.remove();
     }
   });
-  alert.remove();
 };
 
 const buildAlertElement = (key) => {
@@ -156,6 +157,8 @@ const buildAlertElement = (key) => {
   const eventDetails = createElementWithConfig('a', { class: 'event-details' });
   const dateVenueWrapper = createElementWithConfig('div', { class: 'date-venue-wrapper' });
   const trashIcon = createElementWithConfig('img', { class: 'trash-icon' });
+
+  // TODO: Add all properties to createElement function
   trashIcon.src = '/images/trash.svg';
   trashIcon.title = 'Delete this price alert';
   alertPrice.contentEditable = 'true';
@@ -175,23 +178,22 @@ const buildAlertElement = (key) => {
     alertUser(alertWrapper);
   });
 
-  trashIcon.addEventListener('click', (e) => {
-    deleteAlert(e);
-  });
+  trashIcon.addEventListener('click', (e) => { deleteAlert(e); });
 };
 
 const addNewPriceAlert = async (priceAlertValue) => {
   if (!priceAlerts[activePageEventId]) {
-    // TODO: Add a loading dialog with warning that first one takes some time
+    loadingAnimationStart();
     const eventObject = await getEventInfo(activePageEventId);
     eventObject[0].priceAlert = priceAlertValue;
     chrome.storage.sync.set({ [activePageEventId]: eventObject[0] });
     await fetchAllPriceAlerts();
     buildAlertElement(activePageEventId);
+    loadingAnimationEnd();
   }
 };
 
-const updatePriceAlerts = async (eventDataArray) => {
+const updatePriceAlerts = (eventDataArray) => {
   if (priceAlerts === undefined) return;
   const rows = document.querySelectorAll('.alert-wrapper');
   rows.forEach((row) => {
@@ -211,7 +213,6 @@ const updatePriceAlerts = async (eventDataArray) => {
   eventDataArray.forEach((alert) => {
     chrome.storage.sync.set({ [alert.id]: alert });
   });
-  // TODO: popup saying all updated
 };
 
 const closeDialogs = (e) => {
@@ -275,11 +276,12 @@ submitEmail.addEventListener('click', () => {
   if (emailInput) replaceEmailInput();
 });
 
-// clearButton.addEventListener('click', clearStorage);
 updateButton.addEventListener('click', async () => {
   const ids = Object.keys(priceAlerts);
+  loadingAnimationStart();
   const eventDataArray = await getEventInfo(ids);
   updatePriceAlerts(eventDataArray);
+  loadingAnimationEnd();
 });
 
 emailButton.addEventListener('click', () => {
@@ -295,13 +297,10 @@ trackNewEventButton.addEventListener('click', () => {
   addNewPriceAlert(priceAlertSet);
 });
 
-// When launched need to check this too
 currencyCheckbox.addEventListener('change', (e) => {
   if (e.target.checked) {
-    console.log('swapping to usd');
     swapCadUsd();
   } else {
-    console.log('swapping to cad');
     swapUsdCad();
   }
 });
@@ -309,7 +308,6 @@ currencyCheckbox.addEventListener('change', (e) => {
 const init = async () => {
   const currentTabId = await getCurrentTabId();
   await fetchAllPriceAlerts();
-  // await deleteEmail();
   await checkForExistingEmail();
   await setCurrency();
 
@@ -319,7 +317,7 @@ const init = async () => {
   trackButton.addEventListener('click', () => {
     if (currentTabId) {
       setPriceWindow.classList.add('show');
-      // Add focus here
+      document.querySelector('input#alert-price').focus();
     } else {
       wrongUrlWindow.classList.add('show');
     }

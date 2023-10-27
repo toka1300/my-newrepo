@@ -1,4 +1,8 @@
 let priceAlerts;
+const keepAlive = () => setInterval(chrome.runtime.getPlatformInfo, 20e3);
+
+chrome.runtime.onStartup.addListener(keepAlive);
+keepAlive();
 
 const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
   priceAlerts = chrome.storage.sync.get(null, (result) => {
@@ -32,8 +36,10 @@ const getEventInfo = async (ids) => {
 };
 
 const sendEmailNotification = (alert) => {
-  chrome.storage.sync.get('emailAddress', async (result) => {
-    const email = result.emailAddress;
+  chrome.storage.sync.get('email', async (result) => {
+    console.log(result);
+    const { email } = result;
+    console.log('Emailing:', email);
     const { date, name, url } = alert;
     const endpoint = 'https://stubhub-pricing-api.onrender.com/email-user';
     const resp = await fetch(endpoint, {
@@ -51,44 +57,50 @@ const sendEmailNotification = (alert) => {
   });
 };
 
-const alertUser = async (inTheMoney) => {
-  if (inTheMoney === 'yes') {
-    chrome.action.setBadgeText({ text: ' ' });
-    chrome.action.setBadgeBackgroundColor({ color: '#06d6a0' });
-    sendEmailNotification(alert);
-  } else if (inTheMoney === 'no') {
-    chrome.action.setBadgeText({ text: '' });
-  }
+const addAlertBadge = () => {
+  chrome.action.setBadgeText({ text: ' ' });
+  chrome.action.setBadgeBackgroundColor({ color: '#06d6a0' });
 };
 
-const updatePriceAlerts = async () => {
+const removeAlertBadge = () => {
+  chrome.action.setBadgeText({ text: '' });
+};
+
+const updatePriceAlertsAuto = async () => {
   console.log('Updating prices');
-  let inTheMoney;
+  let inTheMoney = false;
   await fetchAllPriceAlerts();
   if (priceAlerts === undefined) return;
   const ids = Object.keys(priceAlerts);
   const fetchedDataArray = await getEventInfo(ids);
-  console.log(fetchedDataArray);
   fetchedDataArray.forEach((alert) => {
-    if (alert.minPrice !== priceAlerts[alert.id].minPrice) {
-      inTheMoney = 'no';
+    const test = 10;
+    // if (alert.minPrice !== priceAlerts[alert.id].minPrice) {
+    if (test !== priceAlerts[alert.id].minPrice) {
       chrome.storage.sync.get(String(alert.id), (result) => {
         const eventObject = result[alert.id];
-        eventObject.minPrice = alert.minPrice;
+        eventObject.minPrice = test;
+        // eventObject.minPrice = alert.minPrice;
         chrome.storage.sync.set({ [alert.id]: eventObject });
       });
-      if (alert.minPrice < priceAlerts[alert.id].priceAlert) {
-        inTheMoney = 'yes';
+      if (test < priceAlerts[alert.id].priceAlert) {
+      // if (alert.minPrice < priceAlerts[alert.id].priceAlert) {
+        inTheMoney = true;
         sendEmailNotification(alert);
       }
     }
   });
-  alertUser(inTheMoney);
+
+  if (inTheMoney) {
+    addAlertBadge();
+  } else {
+    removeAlertBadge();
+  }
 };
 
-chrome.alarms.create('checkPrices', { periodInMinutes: 60 });
+chrome.alarms.create('checkPrices', { periodInMinutes: 30 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'checkPrices') {
-    updatePriceAlerts();
+    updatePriceAlertsAuto();
   }
 });

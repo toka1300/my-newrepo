@@ -37,11 +37,18 @@
         <span>Live</span>
       </div>
     </div>
+
     <div class="price-alert-list"></div>
-    <!-- <button class="clear-storage btn" title="Delete all pricing alerts">Delete All</button> -->
     <button class="btn-add-email btn">Add/Edit Email Notifications</button>
     <img class="btn-track btn" src="/images/plus.svg" alt="Plus sign" title="Start tracking this event">
     <img src="/images/refresh.svg" alt="Refresh button" class="update" title="Refresh live pricing data">
+    
+    <div class="popup loading-dialog hidden">
+      <span>Fetching event details... This may take about 15 seconds</span>
+    </div>
+    <div class="popup done-loading-dialog hidden">
+      <span>All done!</span>
+    </div>
 
     <script src="utilities.js" type="module"></script>
     <script src="popup.js" type="module"></script>

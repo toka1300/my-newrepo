@@ -1,3 +1,18 @@
 {
-  "eslint.enable": true
+  "eslint.enable": true,
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+        {
+            "scope": [
+                "entity.name.tag.reference.scss",
+                "entity.other.attribute-name.parent-selector-suffix.css"
+            
+            ],
+            "settings": {
+                "foreground": "#D7BA7D"
+            }
+        }
+    ]
 }
+}
+
