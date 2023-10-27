@@ -37,9 +37,7 @@ const getEventInfo = async (ids) => {
 
 const sendEmailNotification = (alert) => {
   chrome.storage.sync.get('email', async (result) => {
-    console.log(result);
     const { email } = result;
-    console.log('Emailing:', email);
     const { date, name, url } = alert;
     const endpoint = 'https://stubhub-pricing-api.onrender.com/email-user';
     const resp = await fetch(endpoint, {
@@ -74,17 +72,13 @@ const updatePriceAlertsAuto = async () => {
   const ids = Object.keys(priceAlerts);
   const fetchedDataArray = await getEventInfo(ids);
   fetchedDataArray.forEach((alert) => {
-    const test = 10;
-    // if (alert.minPrice !== priceAlerts[alert.id].minPrice) {
-    if (test !== priceAlerts[alert.id].minPrice) {
+    if (alert.minPrice !== priceAlerts[alert.id].minPrice) {
       chrome.storage.sync.get(String(alert.id), (result) => {
         const eventObject = result[alert.id];
-        eventObject.minPrice = test;
-        // eventObject.minPrice = alert.minPrice;
+        eventObject.minPrice = alert.minPrice;
         chrome.storage.sync.set({ [alert.id]: eventObject });
       });
-      if (test < priceAlerts[alert.id].priceAlert) {
-      // if (alert.minPrice < priceAlerts[alert.id].priceAlert) {
+      if (alert.minPrice < priceAlerts[alert.id].priceAlert) {
         inTheMoney = true;
         sendEmailNotification(alert);
       }
@@ -98,7 +92,7 @@ const updatePriceAlertsAuto = async () => {
   }
 };
 
-chrome.alarms.create('checkPrices', { periodInMinutes: 30 });
+chrome.alarms.create('checkPrices', { periodInMinutes: 60 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'checkPrices') {
     updatePriceAlertsAuto();
