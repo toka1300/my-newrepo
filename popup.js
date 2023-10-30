@@ -29,6 +29,12 @@ const removePastEvents = async (setAlerts) => new Promise((resolve) => {
   });
 });
 
+const inTheMoney = (row) => {
+  const liveMinPrice = Number(row.querySelector('.live-min-price').textContent);
+  const alertPrice = Number(row.querySelector('.alert-price').textContent);
+  return liveMinPrice < alertPrice;
+};
+
 const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
   priceAlerts = chrome.storage.sync.get(null, async (result) => {
     const error = chrome.runtime.lastError;
@@ -134,11 +140,26 @@ const alertUser = (alertWrapper) => {
   const minPrice = Number(alertWrapper.querySelector('.live-min-price').textContent);
   if (minPrice < alertPrice) {
     alertWrapper.classList.add('alert');
-    chrome.action.setBadgeText({ text: ' ' });
-    chrome.action.setBadgeBackgroundColor({ color: '#06d6a0' });
   } else {
     alertWrapper.classList.remove('alert');
-    chrome.action.setBadgeText({ text: '' });
+  }
+};
+
+const addBadge = () => {
+  chrome.action.setBadgeText({ text: ' ' });
+  chrome.action.setBadgeBackgroundColor({ color: '#06d6a0' });
+};
+
+const removeBadge = () => {
+  chrome.action.setBadgeText({ text: '' });
+};
+
+const checkAllRowsInTheMoney = (rows) => {
+  console.log(rows);
+  if (rows.some(inTheMoney)) {
+    addBadge();
+  } else {
+    removeBadge();
   }
 };
 
@@ -175,6 +196,11 @@ const buildAlertElement = (key) => {
   alertPrice.addEventListener('blur', (e) => {
     saveNewAlertPrice(e);
     alertUser(alertWrapper);
+    if (liveMinPrice.textContent < alertPrice.textContent) {
+      addBadge();
+    } else {
+      removeBadge();
+    }
   });
 
   trashIcon.addEventListener('click', (e) => {
@@ -213,6 +239,7 @@ const updatePriceAlerts = (eventDataArray) => {
       alertUser(row);
     }
   });
+  checkAllRowsInTheMoney([...rows]);
   eventDataArray.forEach((alert) => {
     chrome.storage.sync.set({ [alert.id]: alert });
   });
@@ -316,6 +343,8 @@ const init = async () => {
 
   Object.keys(priceAlerts).forEach((key) => buildAlertElement(key));
   if (priceAlerts[activePageEventId]) trackButton.classList.add('hide');
+  const rows = [...document.querySelectorAll('.alert-wrapper')];
+  checkAllRowsInTheMoney(rows);
 
   trackButton.addEventListener('click', () => {
     if (currentTabId) {
