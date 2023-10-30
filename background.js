@@ -25,7 +25,6 @@ const getEventInfo = async (ids) => {
     const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${csvIds}`;
     console.log('fetching from', endpoint);
     const response = await fetch(endpoint);
-    console.log(response);
     const json = await response.json();
     console.log(json);
     return json;
@@ -65,13 +64,13 @@ const removeAlertBadge = () => {
 };
 
 const updatePriceAlertsAuto = async () => {
-  console.log('Updating prices');
   let inTheMoney = false;
   await fetchAllPriceAlerts();
   if (priceAlerts === undefined) return;
   const ids = Object.keys(priceAlerts);
   const fetchedDataArray = await getEventInfo(ids);
   fetchedDataArray.forEach((alert) => {
+    sendEmailNotification(alert);// TODO: Remove
     if (alert.minPrice !== priceAlerts[alert.id].minPrice) {
       chrome.storage.sync.get(String(alert.id), (result) => {
         const eventObject = result[alert.id];
@@ -80,7 +79,7 @@ const updatePriceAlertsAuto = async () => {
       });
       if (alert.minPrice < priceAlerts[alert.id].priceAlert) {
         inTheMoney = true;
-        sendEmailNotification(alert);
+        // sendEmailNotification(alert);
       }
     }
   });
@@ -92,6 +91,7 @@ const updatePriceAlertsAuto = async () => {
   }
 };
 
+updatePriceAlertsAuto();
 chrome.alarms.create('checkPrices', { periodInMinutes: 60 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'checkPrices') {

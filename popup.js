@@ -20,13 +20,23 @@ const createElementWithConfig = (type, config = {}) => {
   return element;
 };
 
+const removePastEvents = async (setAlerts) => new Promise((resolve) => {
+  Object.keys(setAlerts).forEach((key) => {
+    if (new Date() > new Date(setAlerts[key].date)) {
+      chrome.storage.sync.remove(key);
+    }
+    resolve();
+  });
+});
+
 const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
-  priceAlerts = chrome.storage.sync.get(null, (result) => {
+  priceAlerts = chrome.storage.sync.get(null, async (result) => {
     const error = chrome.runtime.lastError;
     if (error) {
       console.error('Error fetching price alerts from Chrome storage:', error);
       reject(chrome.runtime.lastError);
     } else {
+      await removePastEvents(result);
       priceAlerts = result;
       delete priceAlerts.email;
       delete priceAlerts.currency;
@@ -132,17 +142,6 @@ const alertUser = (alertWrapper) => {
   }
 };
 
-const deleteAlert = (e) => {
-  const alert = e.target.closest('div');
-  chrome.storage.sync.remove(alert.id, () => {
-    if (chrome.storage.lastError) {
-      console.log(chrome.runtime.lastError);
-    } else {
-      alert.remove();
-    }
-  });
-};
-
 const buildAlertElement = (key) => {
   const alertData = priceAlerts[key];
   if (!alertData) return;
@@ -178,7 +177,11 @@ const buildAlertElement = (key) => {
     alertUser(alertWrapper);
   });
 
-  trashIcon.addEventListener('click', (e) => { deleteAlert(e); });
+  trashIcon.addEventListener('click', (e) => {
+    const div = e.target.closest('div');
+    chrome.storage.sync.remove(div.id);
+    div.remove();
+  });
 };
 
 const addNewPriceAlert = async (priceAlertValue) => {
