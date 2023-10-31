@@ -4,13 +4,23 @@ const keepAlive = () => setInterval(chrome.runtime.getPlatformInfo, 20e3);
 chrome.runtime.onStartup.addListener(keepAlive);
 keepAlive();
 
+const removePastEvents = async (setAlerts) => new Promise((resolve) => {
+  Object.keys(setAlerts).forEach((key) => {
+    if (new Date() > new Date(setAlerts[key].date)) {
+      chrome.storage.sync.remove(key);
+    }
+    resolve();
+  });
+});
+
 const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
-  priceAlerts = chrome.storage.sync.get(null, (result) => {
+  priceAlerts = chrome.storage.sync.get(null, async (result) => {
     const error = chrome.runtime.lastError;
     if (error) {
       console.log('Error fetching price alerts from Chrome storage:', error);
       reject(chrome.runtime.lastError);
     } else {
+      await removePastEvents(result);
       priceAlerts = result;
       delete priceAlerts.email;
       delete priceAlerts.currency;
