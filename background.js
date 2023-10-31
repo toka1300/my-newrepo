@@ -80,7 +80,6 @@ const updatePriceAlertsAuto = async () => {
   const ids = Object.keys(priceAlerts);
   const fetchedDataArray = await getEventInfo(ids);
   fetchedDataArray.forEach((alert) => {
-    sendEmailNotification(alert);// TODO: Remove
     if (alert.minPrice !== priceAlerts[alert.id].minPrice) {
       chrome.storage.sync.get(String(alert.id), (result) => {
         const eventObject = result[alert.id];
@@ -89,7 +88,7 @@ const updatePriceAlertsAuto = async () => {
       });
       if (alert.minPrice < priceAlerts[alert.id].priceAlert) {
         inTheMoney = true;
-        // sendEmailNotification(alert);
+        sendEmailNotification(alert);
       }
     }
   });

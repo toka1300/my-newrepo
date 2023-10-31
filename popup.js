@@ -155,7 +155,6 @@ const removeBadge = () => {
 };
 
 const checkAllRowsInTheMoney = (rows) => {
-  console.log(rows);
   if (rows.some(inTheMoney)) {
     addBadge();
   } else {
