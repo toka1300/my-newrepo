@@ -79,19 +79,21 @@ const updatePriceAlertsAuto = async () => {
   if (priceAlerts === undefined) return;
   const ids = Object.keys(priceAlerts);
   const fetchedDataArray = await getEventInfo(ids);
-  fetchedDataArray.forEach((alert) => {
-    if (alert.minPrice !== priceAlerts[alert.id].minPrice) {
-      chrome.storage.sync.get(String(alert.id), (result) => {
-        const eventObject = result[alert.id];
-        eventObject.minPrice = alert.minPrice;
-        chrome.storage.sync.set({ [alert.id]: eventObject });
-      });
-      if (alert.minPrice < priceAlerts[alert.id].priceAlert) {
-        inTheMoney = true;
-        sendEmailNotification(alert);
+  if (fetchedDataArray) {
+    fetchedDataArray.forEach((alert) => {
+      if (alert.minPrice !== priceAlerts[alert.id].minPrice) {
+        chrome.storage.sync.get(String(alert.id), (result) => {
+          const eventObject = result[alert.id];
+          eventObject.minPrice = alert.minPrice;
+          chrome.storage.sync.set({ [alert.id]: eventObject });
+        });
+        if (alert.minPrice < priceAlerts[alert.id].priceAlert) {
+          inTheMoney = true;
+          sendEmailNotification(alert);
+        }
       }
-    }
-  });
+    });
+  }
 
   if (inTheMoney) {
     addAlertBadge();

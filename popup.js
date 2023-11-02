@@ -346,6 +346,7 @@ const init = async () => {
   checkAllRowsInTheMoney(rows);
 
   trackButton.addEventListener('click', () => {
+    console.log('It clicked');
     if (currentTabId) {
       setPriceWindow.classList.add('show');
       document.querySelector('input#alert-price').focus();

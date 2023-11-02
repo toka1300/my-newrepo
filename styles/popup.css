@@ -32,6 +32,12 @@ h1 {
   }
 }
 
+.btn.btn-submit-tracking {
+  width: 100%;
+  background-color: #3F1D74;
+  color: white;
+}
+
 .alert-wrapper {
   position: relative;
   display: flex;
@@ -149,7 +155,7 @@ h1 {
 
 .btn-track {
   position: absolute;
-  background-color: rgb(99, 0, 255);
+  background-color: #3F1D74;
   color: white;
   border: none;
   top: 0.5rem;
@@ -168,6 +174,11 @@ h1 {
   padding: 0.5rem;
   width: max-content;
   cursor: pointer;
+  transition: 0.4s;
+
+  &:hover {
+    scale: 1.05;
+  }
 
   &.clear-storage {
     color: rgb(99, 0, 255);
@@ -216,13 +227,15 @@ h1 {
   gap: 0.5rem;
 
   &.show {
-    width: 168px;
-    padding: 1rem;
+    align-items: flex-end;
+    width: 148px;
+    padding: 1rem 0.5rem;
+    border-radius: 8px;
   }
 }
 
 .set-price-alert-window {
-  height: 100px;
+  height: 64px;
 }
 
 .non-stubhub-page.show {
@@ -286,6 +299,12 @@ h1 {
 
 .btn-add-email {
   margin: 0.5rem 0;
+  background-color: white;
+  border: 1px solid rgb(207, 212, 217);;
+
+  &:hover {
+    scale: 1.02;
+  }
 }
 
 .switch {
@@ -327,11 +346,11 @@ h1 {
 }
 
 input:checked + .slider {
-  background-color: #2196F3;
+  background-color: #3F1D74;
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #2196F3;
+  box-shadow: 0 0 1px #3F1D74;
 }
 
 input:checked + .slider:before {
