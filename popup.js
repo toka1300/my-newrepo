@@ -21,6 +21,7 @@ const createElementWithConfig = (type, config = {}) => {
 };
 
 const removePastEvents = async (setAlerts) => new Promise((resolve) => {
+  if (setAlerts.keys === undefined) resolve();
   Object.keys(setAlerts).forEach((key) => {
     if (new Date() > new Date(setAlerts[key].date)) {
       chrome.storage.sync.remove(key);
@@ -306,6 +307,7 @@ submitEmail.addEventListener('click', () => {
 });
 
 updateButton.addEventListener('click', async () => {
+  if (!priceAlerts) return;
   const ids = Object.keys(priceAlerts);
   loadingAnimationStart();
   const eventDataArray = await getEventInfo(ids);
@@ -346,7 +348,6 @@ const init = async () => {
   checkAllRowsInTheMoney(rows);
 
   trackButton.addEventListener('click', () => {
-    console.log('It clicked');
     if (currentTabId) {
       setPriceWindow.classList.add('show');
       document.querySelector('input#alert-price').focus();
