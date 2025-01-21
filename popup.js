@@ -95,21 +95,24 @@ const loadingAnimationEnd = () => {
   }, '2000');
 };
 
-const getCurrentTabId = async () => {
+// Get the event ID and country code
+const getCurrentTabInfo = async () => {
   const [tab] = await chrome.tabs.query({ active: true });
-  const urlObject = new URL(tab.url);
-  const { href, host, pathname } = urlObject;
+  const url = new URL(tab.url);
+  const { host, pathname } = url;
   if (!host.includes('stubhub') || !pathname.includes('event')) return null;
-  const activePageEventId = href.split('/').at(-2);
-  return activePageEventId;
+  return {
+    activePageEventId: url.pathname.split('/').at(-2),
+    countryDomain: url.hostname.split('.').at(-1)
+  };
 };
 
-const activePageEventId = await getCurrentTabId();
+// const activePageEventInfo = await getCurrentTabInfo();
 
-const getEventInfo = async (ids) => {
+const getEventInfo = async (ids, country) => {
   try {
     const csvIds = ids.toString();
-    const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${csvIds}`;
+    const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${csvIds}&country=${country}`;
     console.log('fetching from', endpoint);
     const response = await fetch(endpoint);
     const json = await response.json();
@@ -163,6 +166,7 @@ const checkAllRowsInTheMoney = (rows) => {
   }
 };
 
+// Constructs the row for the alert to be displayed
 const buildAlertElement = (key) => {
   const alertData = priceAlerts[key];
   if (!alertData) return;
@@ -208,18 +212,6 @@ const buildAlertElement = (key) => {
     chrome.storage.sync.remove(div.id);
     div.remove();
   });
-};
-
-const addNewPriceAlert = async (priceAlertValue) => {
-  if (!priceAlerts[activePageEventId]) {
-    loadingAnimationStart();
-    const eventObject = await getEventInfo(activePageEventId);
-    eventObject[0].priceAlert = priceAlertValue;
-    chrome.storage.sync.set({ [activePageEventId]: eventObject[0] });
-    await fetchAllPriceAlerts();
-    buildAlertElement(activePageEventId);
-    loadingAnimationEnd();
-  }
 };
 
 const updatePriceAlerts = (eventDataArray) => {
@@ -323,11 +315,6 @@ document.addEventListener('click', (e) => {
   closeDialogs(e);
 });
 
-trackNewEventButton.addEventListener('click', () => {
-  const priceAlertSet = setPriceWindow.querySelector('input').value;
-  addNewPriceAlert(priceAlertSet);
-});
-
 currencyCheckbox.addEventListener('change', (e) => {
   if (e.target.checked) {
     swapCadUsd();
@@ -337,24 +324,44 @@ currencyCheckbox.addEventListener('change', (e) => {
 });
 
 const init = async () => {
-  const currentTabId = await getCurrentTabId();
+  const { activePageEventId, countryDomain } = await getCurrentTabInfo();
   await fetchAllPriceAlerts();
   await checkForExistingEmail();
   await setCurrency();
 
+  // loads animation and calls the function to actually fetch info
+  const addNewPriceAlert = async (priceAlertValue) => {
+    if (!priceAlerts[activePageEventId]) {
+      loadingAnimationStart();
+      const eventObject = await getEventInfo(activePageEventId, countryDomain);
+      eventObject[0].priceAlert = priceAlertValue;
+      chrome.storage.sync.set({ [activePageEventId]: eventObject[0] });
+      await fetchAllPriceAlerts();
+      buildAlertElement(activePageEventId);
+      loadingAnimationEnd();
+    }
+  };
+
   Object.keys(priceAlerts).forEach((key) => buildAlertElement(key));
   if (priceAlerts[activePageEventId]) trackButton.classList.add('hide');
-  const rows = [...document.querySelectorAll('.alert-wrapper')];
-  checkAllRowsInTheMoney(rows);
+    const rows = [...document.querySelectorAll('.alert-wrapper')];
+    checkAllRowsInTheMoney(rows);
 
-  trackButton.addEventListener('click', () => {
-    if (currentTabId) {
-      setPriceWindow.classList.add('show');
-      document.querySelector('input#alert-price').focus();
-    } else {
-      wrongUrlWindow.classList.add('show');
-    }
+    // Expands dialog box for user to input price alert value or info msg for wrong page
+    trackButton.addEventListener('click', () => {
+      if (activePageEventId) {
+        setPriceWindow.classList.add('show');
+        document.querySelector('input#alert-price').focus();
+      } else {
+        wrongUrlWindow.classList.add('show');
+      }
   });
+
+    // Submit button to track new event, fetches info and adds to the list
+    trackNewEventButton.addEventListener('click', () => {
+      const priceAlertSet = setPriceWindow.querySelector('input').value;
+      addNewPriceAlert(priceAlertSet);
+    });
 };
 
 init();

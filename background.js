@@ -29,10 +29,10 @@ const fetchAllPriceAlerts = async () => new Promise((resolve, reject) => {
   });
 });
 
-const getEventInfo = async (ids) => {
+const getEventInfo = async (ids, country) => {
   try {
     const csvIds = ids.toString();
-    const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${csvIds}`;
+    const endpoint = `https://stubhub-pricing-api.onrender.com/get-event-info?id=${csvIds}&country=${country}`;
     console.log('fetching from', endpoint);
     const response = await fetch(endpoint);
     const json = await response.json();
